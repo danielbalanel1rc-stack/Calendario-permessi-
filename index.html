@@ -508,7 +508,7 @@ document.getElementById('modalBg').onclick = (e)=>{ if(e.target.id==='modalBg') 
 document.getElementById('drawerToggle').onclick = ()=> document.getElementById('panel').classList.toggle('open');
 document.getElementById('panelBack').onclick = ()=> document.getElementById('panel').classList.remove('open');
 
-/* ---------- EXPORT / INVIO PDF ---------- */
+/* ---------- EXPORT / INVIO PDF OPTIMIZED ---------- */
 async function exportAndSharePDF(){
   const btn = document.getElementById('pdfBtn');
   const originalLabel = btn.textContent;
@@ -526,29 +526,35 @@ async function exportAndSharePDF(){
   const prevWidth = wrap.style.width;
 
   try{
-    // Espande temporaneamente il contenitore per catturare TUTTO il calendario, non solo la parte visibile a schermo
     wrap.style.overflow = 'visible';
     wrap.style.width = 'max-content';
 
+    // OTTIMIZZAZIONE 1: Scala ridotta a 1 per ridurre le dimensioni totali del canvas di 4 volte[span_2](start_span)[span_2](end_span)
     const canvas = await html2canvas(wrap, {
       backgroundColor: '#12151a',
-      scale: 2,
+      scale: 1,
       useCORS: true
     });
 
     wrap.style.overflow = prevOverflow;
     wrap.style.width = prevWidth;
 
-    const imgData = canvas.toDataURL('image/png');
+    // OTTIMIZZAZIONE 2: Qualità dell'immagine abbassata a 0.6 per renderla super leggera[span_3](start_span)[span_3](end_span)
+    const imgData = canvas.toDataURL('image/jpeg', 0.6);
     const { jsPDF } = window.jspdf;
-    const ptW = canvas.width * 0.75 / 2;   // px -> pt, corretto per scale:2
-    const ptH = canvas.height * 0.75 / 2;
+    
+    const ptW = canvas.width * 0.75;   // px -> pt
+    const ptH = canvas.height * 0.75;
+    
+    // OTTIMIZZAZIONE 3: Inserito parametro "compress: true" per forzare l'algoritmo Flate/Deflate nel motore PDF[span_4](start_span)[span_4](end_span)
     const pdf = new jsPDF({
       orientation: ptW > ptH ? 'landscape' : 'portrait',
       unit: 'pt',
-      format: [ptW, ptH]
+      format: [ptW, ptH],
+      compress: true
     });
-    pdf.addImage(imgData, 'PNG', 0, 0, ptW, ptH);
+    
+    pdf.addImage(imgData, 'JPEG', 0, 0, ptW, ptH);
     const fileName = `Calendario_Ferie_Permessi_${currentYear}.pdf`;
     const pdfBlob = pdf.output('blob');
     const file = new File([pdfBlob], fileName, {type:'application/pdf'});
@@ -568,7 +574,7 @@ async function exportAndSharePDF(){
     wrap.style.width = prevWidth;
     console.error(err);
     if(err && err.name === 'AbortError'){
-      // utente ha annullato la condivisione: nessun errore da mostrare
+      // utente ha annullato la condivisione
     } else {
       alert('Non sono riuscito a generare il PDF. Riprova (serve connessione internet).');
     }
